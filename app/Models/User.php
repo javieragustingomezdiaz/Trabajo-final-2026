@@ -67,4 +67,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserApproval::class, 'evaluator_id');
     }
+
+    public function hasPermission(string $permission): bool
+    {
+        if (!$this->role || !$this->role->is_active) {
+            return false;
+        }
+
+        return $this->role
+            ->permissions()
+            ->where('name', $permission)
+            ->exists();
+    }
 }
