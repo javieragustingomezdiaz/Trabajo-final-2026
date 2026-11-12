@@ -3,25 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
 use App\Models\Permission;
 use App\Services\RoleService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 
 class RoleController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
     public function index(): View
     {
+        $this->authorize('viewAny', Role::class);
+
         $roles = Role::withCount('users')
             ->orderBy('name')
             ->paginate(10);
@@ -34,6 +36,8 @@ class RoleController extends Controller
      */
     public function create(): View
     {
+        $this->authorize('create', Role::class);
+
         $permissions = Permission::whereNotIn('name', [
             'roles.view',
             'roles.create',
@@ -44,7 +48,7 @@ class RoleController extends Controller
         ])
             ->orderBy('name')
             ->get()
-            ->groupBy(fn ($permissions) => explode('.', $permissions->name)[0]);
+            ->groupBy(fn ($permission) => explode('.', $permission->name)[0]);
         return view('roles.create', compact('permissions'));
     }
 
@@ -53,6 +57,8 @@ class RoleController extends Controller
      */
     public function store(StoreRoleRequest $request): RedirectResponse
     {
+        $this->authorize('create', Role::class);
+
         $validated = $request->validated();
 
         DB::transaction(function () use ($validated) {
@@ -74,6 +80,7 @@ class RoleController extends Controller
      */
     public function show(Role $role): View
     {
+        $this->authorize('view', $role);
         return view('roles.show', compact('role'));
     }
 
@@ -82,6 +89,8 @@ class RoleController extends Controller
      */
     public function edit(Role $role): View
     {
+        $this->authorize('update', $role);
+
         $permissions = Permission::whereNotIn('name', [
             'roles.view',
             'roles.create',
@@ -104,6 +113,8 @@ class RoleController extends Controller
      */
     public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
     {
+        $this->authorize('update', $role);
+
         $validated = $request->validated();
 
         DB::transaction(function () use ($validated, $role) {
@@ -121,6 +132,8 @@ class RoleController extends Controller
 
     public function deactivate(RoleService $roleService, Role $role): RedirectResponse
     {
+        $this->authorize('deactivate', $role);
+
         $roleService->deactivate($role);
 
         return redirect()
@@ -130,19 +143,13 @@ class RoleController extends Controller
 
     public function activate(Role $role, RoleService $roleService): RedirectResponse
     {
+        $this->authorize('activate', $role);
+
         $roleService->activate($role);
 
         return redirect()
             ->route('roles.index')
             ->with('success', 'Rol activado correctamente.');
     }
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
-
 
 }
