@@ -1,8 +1,8 @@
 <x-layouts.app title="Panel">
-    <h1>Bienvenido, {{ auth()->user()->name }}</h1>
+    <div class="-m-4 min-h-screen bg-stone-100 p-4 md:-m-8 md:p-8">
+        <h1 class="text-2xl font-semibold text-slate-800">
+            Bienvenido, {{ auth()->user()->person?->name ?? 'usuario' }}
+        </h1>
 
-    <form method="POST" action="{{ route('logout') }}">
-        @csrf
-        <button type="submit">Cerrar sesión</button>
-    </form>
+    </div>
 </x-layouts.app>

@@ -15,6 +15,12 @@ class RolePolicy
             && $user->role->name === 'admin';
     }
 
+    private function canManageRole(User $user, Role $role): bool
+    {
+        return $this->isAdministrator($user)
+            && (int) $user->role_id !== (int) $role->id;
+    }
+
     public function viewAny(User $user): bool
     {
         return $this->isAdministrator($user);
@@ -35,19 +41,19 @@ class RolePolicy
 
     public function update(User $user, Role $role): bool
     {
-        return $this->isAdministrator($user);
+        return $this->canManageRole($user, $role);
     }
 
 
     public function deactivate(User $user, Role $role): bool
     {
-        return $this->isAdministrator($user);
+        return $this->canManageRole($user, $role);
     }
 
 
     public function activate(User $user, Role $role): bool
     {
-        return $this->isAdministrator($user);
+        return $this->canManageRole($user, $role);
     }
 
 }

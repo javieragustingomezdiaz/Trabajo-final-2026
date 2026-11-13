@@ -71,47 +71,44 @@
                         </td>
 
                         <td class="px-6 py-4 text-right whitespace-nowrap">
+                            @if ((int) $role->id === (int) auth()->user()->role_id)
+                                <span class="text-gray-500">Tu rol actual</span>
+                            @else
+                                @can('update', $role)
+                                    <a href="{{ route('roles.edit', $role) }}"
+                                    class="font-medium text-blue-600 hover:underline">
+                                        Modificar
+                                    </a>
+                                @endcan
 
-                            <a href="{{ route('roles.show', $role) }}"
-                               class="mr-3 font-medium text-blue-600 hover:underline">
-                                Consultar
-                            </a>
+                                @if ($role->is_active)
+                                    @can('deactivate', $role)
+                                        <form
+                                            action="{{ route('roles.deactivate', $role) }}"
+                                            method="POST"
+                                            onsubmit="return confirm('¿Está seguro de que desea desactivar este rol?')"
+                                        >
+                                            @csrf
+                                            @method('PATCH')
 
-                            <a href="{{ route('roles.edit', $role) }}"
-                               class="font-medium text-blue-600 hover:underline">
-                                Modificar
-                            </a>
+                                            <button type="submit">Desactivar</button>
+                                        </form>
+                                    @endcan
+                                @else
+                                    @can('activate', $role)
+                                        <form
+                                            action="{{ route('roles.activate', $role) }}"
+                                            method="POST"
+                                            onsubmit="return confirm('¿Está seguro de que desea activar este rol?')"
+                                        >
+                                            @csrf
+                                            @method('PATCH')
 
-                            @if ($role->is_active)
-                                <form
-                                    action="{{ route('roles.deactivate', $role) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('¿Está seguro de que desea desactivar este rol?')"
-                                >
-                                    @csrf
-                                    @method('PATCH')
-
-                                    <button type="submit">
-                                        Desactivar
-                                    </button>
-                                </form>
+                                            <button type="submit">Activar</button>
+                                        </form>
+                                    @endcan
+                                @endif
                             @endif
-
-                            @if (!$role->is_active)
-                                <form
-                                    action="{{ route('roles.activate', $role) }}"
-                                    method="POST"
-                                    onsubmit="return confirm('¿Está seguro de que desea activar este rol?')"
-                                >
-                                    @csrf
-                                    @method('PATCH')
-
-                                    <button type="submit">
-                                        Activar
-                                    </button>
-                                </form>
-                            @endif
-
                         </td>
 
                     </tr>
