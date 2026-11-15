@@ -28,6 +28,21 @@ Route::middleware('auth')->group(function () {
     Route::patch('/roles/{role}/activate', [RoleController::class, 'activate'])
         ->name('roles.activate');
 
+    Route::get('/materials/search', [MaterialController::class, 'search'])
+        ->name('materials.search');
+
+    Route::get('/materials/{material}/edit', [MaterialController::class, 'edit'])
+        ->name('materials.edit');
+
+    Route::put('/materials/{material}', [MaterialController::class, 'update'])
+        ->name('materials.update');
+
+    Route::patch('/materials/{material}/deactivate', [MaterialController::class, 'deactivate'])
+        ->name('materials.deactivate');
+
+    Route::patch('/materials/{material}/activate', [MaterialController::class, 'activate'])
+        ->name('materials.activate');
+
     Route::get('/materials/create', [MaterialController::class, 'create'])
         ->name('materials.create');
 

@@ -38,6 +38,26 @@ class StoreMaterialRequest extends FormRequest
             'media_type_id' => ['required', 'integer', 'exists:media_types,id'],
             'content_type_id' => ['required', 'integer', 'exists:content_types,id'],
             'carrier_type_id' => ['required', 'integer', 'exists:carrier_types,id'],
+            'author_ids' => ['sometimes', 'array'],
+            'author_ids.*' => ['integer', 'distinct', 'exists:authors,id'],
+
+            'topic_ids' => ['sometimes', 'array'],
+            'topic_ids.*' => ['integer', 'distinct', 'exists:topics,id'],
+
+            'new_authors' => ['sometimes', 'array', 'max:50'],
+            'new_authors.*' => ['required', 'array'],
+            'new_authors.*.name' => ['required', 'string', 'max:255'],
+            'new_authors.*.author_type_id' => ['required', 'integer', 'exists:author_types,id'],
+            'new_authors.*.birth_date' => ['nullable', 'date'],
+            'new_authors.*.death_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:new_authors.*.birth_date',
+            ],
+
+            'new_topics' => ['sometimes', 'array', 'max:100'],
+            'new_topics.*' => ['required', 'array'],
+            'new_topics.*.name' => ['required', 'string', 'max:255'],
         ];
 
         return array_merge($baseRules, $specialization['rules']);

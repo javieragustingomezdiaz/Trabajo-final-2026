@@ -35,12 +35,13 @@
                     @endif
 
                     @if (in_array(auth()->user()->role?->name, ['admin', 'librarian'], true))
-                        <a href="{{ route('materials.create') }}"
-                        title="Registrar material"
-                        class="rounded px-3 py-2 hover:bg-slate-700">
-                            <span class="md:hidden" aria-hidden="true">＋</span>
-                            <span class="hidden md:inline">Registrar material</span>
+                        <a href="{{ route('materials.search') }}"
+                           title="Buscar material"
+                           class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">⌕</span>
+                            <span class="hidden md:inline">Materiales</span>
                         </a>
+
                     @endif
                 </nav>
 
