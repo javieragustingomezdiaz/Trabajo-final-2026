@@ -125,6 +125,11 @@
                                                 Editar
                                             </a>
 
+                                            <a href="{{ route('items.form', $material) }}"
+                                                class="font-medium text-green-700 hover:underline">
+                                                Agregar ejemplar
+                                            </a>
+
                                             @if ($material->is_active)
                                                 <form method="POST"
                                                       action="{{ route('materials.deactivate', $material) }}"

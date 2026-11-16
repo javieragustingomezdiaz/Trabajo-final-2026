@@ -42,6 +42,13 @@
                             <span class="hidden md:inline">Materiales</span>
                         </a>
 
+                        <a href="{{ route('items.search') }}"
+                            title="Ejemplares"
+                            class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">▤</span>
+                            <span class="hidden md:inline">Ejemplares</span>
+                        </a>
+
                     @endif
                 </nav>
 

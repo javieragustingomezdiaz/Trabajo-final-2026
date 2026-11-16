@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Material extends Model
 {
@@ -127,5 +128,10 @@ class Material extends Model
     public function object(): HasOne
     {
         return $this->hasOne(ObjectMaterial::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(Item::class);
     }
 }
