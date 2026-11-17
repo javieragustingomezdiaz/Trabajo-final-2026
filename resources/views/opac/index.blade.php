@@ -17,7 +17,26 @@
         @endif
 
         <form method="GET" action="{{ route('opac.index') }}" class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <label for="q" class="sr-only">Buscar en el catálogo</label>
+                <input
+                    id="q"
+                    name="q"
+                    value="{{ $filters['q'] ?? '' }}"
+                    maxlength="100"
+                    class="catalog-input mt-0 min-h-12 flex-1 text-base"
+                    placeholder="Título, autor, tema, ISBN o editorial..."
+                >
+                <button type="submit" class="rounded-md bg-blue-700 px-6 py-3 text-sm font-medium text-white hover:bg-blue-800">
+                    Buscar
+                </button>
+            </div>
+
+            <details class="mt-4 border-t border-slate-200 pt-3" @if ($advancedFiltersActive) open @endif>
+                <summary class="cursor-pointer select-none text-sm font-medium text-blue-700 hover:text-blue-800">
+                    Filtros avanzados
+                </summary>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <label class="block text-sm font-medium text-slate-700">
                     Título
                     <input name="title" value="{{ $filters['title'] ?? '' }}" maxlength="100" class="catalog-input" placeholder="Título o parte del título">
@@ -60,11 +79,9 @@
                     <input type="number" name="publication_year" value="{{ $filters['publication_year'] ?? '' }}" min="1000" max="9999" class="catalog-input" placeholder="Ej.: 2024">
                 </label>
             </div>
+            </details>
 
-            <div class="mt-5 flex flex-wrap gap-3">
-                <button type="submit" class="rounded-md bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800">
-                    Buscar
-                </button>
+            <div class="mt-4 flex justify-end">
                 <a href="{{ route('opac.index') }}" class="rounded-md border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     Limpiar
                 </a>
@@ -84,43 +101,49 @@
                 No se encontraron resultados según los criterios de búsqueda.
             </p>
         @else
-            <div class="mb-3 mt-6 text-sm text-slate-600">
+          <div class="mx-auto mt-6 max-w-3xl">
+            <div class="mb-3 text-sm text-slate-600">
                 {{ $materials->total() }} {{ $materials->total() === 1 ? 'material encontrado' : 'materiales encontrados' }}
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div class="space-y-5">
                 @foreach ($materials as $material)
-                    <article class="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                        <div class="flex-1">
-                            <h2 class="text-lg font-semibold text-slate-900">
-                                <a href="{{ route('opac.materials.show', $material) }}" class="hover:text-blue-700 hover:underline">
-                                    {{ $material->title }}
+                    <article class="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                        <div class="flex items-start gap-4">
+                            @if ($material->cover_url)
+                                <img src="{{ $material->cover_url }}" alt="Portada de {{ $material->title }}"
+                                     class="h-45 w-35 shrink-0 rounded border border-slate-200 bg-slate-50 object-contain">
+                            @else
+                                <div class="flex h-36 w-28 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-50 text-center text-xs text-slate-500">
+                                    Sin portada
+                                </div>
+                            @endif
+                            <div class="min-w-0 flex-1">
+                                <h2 class="text-xl font-semibold leading-6 text-slate-900">
+                                    <a href="{{ route('opac.materials.show', $material) }}" class="hover:text-blue-700 hover:underline">
+                                        {{ $material->title }}
+                                    </a>
+                                </h2>
+                                <p class="mt-1 text-base text-slate-600">
+                                    {{ $material->authors->pluck('name')->join(', ') ?: 'Autoría no informada' }}
+                                </p>
+                                <div class="mt-2 space-y-1 text-base text-slate-700">
+                                    <p><span class="text-slate-500">Tipo:</span> {{ $material->materialType?->name ?? '—' }}</p>
+                                    <p><span class="text-slate-500">Año:</span> {{ $material->publication_date?->format('Y') ?? '—' }}</p>
+                                    <p><span class="text-slate-500">Ejemplares activos:</span> {{ $material->active_copies_count }}</p>
+                                    <p><span class="text-slate-500">Disponibles:</span> {{ $material->available_copies_count }}</p>
+                                </div>
+                                <a href="{{ route('opac.materials.show', $material) }}" class="mt-2 inline-block text-base font-medium text-blue-700 hover:underline">
+                                    Ver detalles
                                 </a>
-                            </h2>
-                            <p class="mt-1 text-sm text-slate-600">
-                                {{ $material->authors->pluck('name')->join(', ') ?: 'Autoría no informada' }}
-                            </p>
-                            <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                                <dt class="text-slate-500">Tipo</dt>
-                                <dd>{{ $material->materialType?->name ?? '—' }}</dd>
-                                <dt class="text-slate-500">Soporte</dt>
-                                <dd>{{ $material->carrierType?->name ?? '—' }}</dd>
-                                <dt class="text-slate-500">Año</dt>
-                                <dd>{{ $material->publication_date?->format('Y') ?? '—' }}</dd>
-                                <dt class="text-slate-500">Ejemplares activos</dt>
-                                <dd>{{ $material->active_copies_count }}</dd>
-                                <dt class="text-slate-500">Disponibles</dt>
-                                <dd>{{ $material->available_copies_count }}</dd>
-                            </dl>
+                            </div>
                         </div>
-                        <a href="{{ route('opac.materials.show', $material) }}" class="mt-5 font-medium text-blue-700 hover:underline">
-                            Ver detalles
-                        </a>
                     </article>
                 @endforeach
             </div>
 
             <div class="mt-6">{{ $materials->links() }}</div>
+          </div>
         @endif
     </section>
 </x-layouts.opac>

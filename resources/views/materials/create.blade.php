@@ -21,6 +21,7 @@
 
         <form method="POST"
               action="{{ $isEditing ? route('materials.update', $material) : route('materials.store', $materialType) }}"
+              enctype="multipart/form-data"
               class="mt-6 space-y-8">
             @csrf
             @if ($isEditing)
@@ -160,10 +161,25 @@
                     </div>
 
                     <div class="md:col-span-2">
-                        <label for="cover" class="catalog-label">Ruta de portada</label>
-                        <input id="cover" name="cover" value="{{ old('cover', $material->cover ?? '') }}"
-                               class="{{ $inputClass }}">
+                        <label for="cover" class="catalog-label">Portada del material</label>
+                        @if ($material?->cover_url)
+                            <div class="mt-3 flex items-start gap-4">
+                                <img src="{{ $material->cover_url }}" alt="Portada actual de {{ $material->title }}"
+                                     class="h-36 w-28 rounded border border-slate-200 object-cover">
+                                <p class="text-sm text-slate-600">Portada actual</p>
+                            </div>
+                        @endif
+                        <input id="cover" type="file" name="cover" accept="image/jpeg,image/png,image/webp"
+                               class="{{ $inputClass }} file:mr-4 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700">
+                        <p class="mt-1 text-xs text-slate-500">Formatos JPG, PNG o WEBP. Tamaño máximo: 2 MB.</p>
                         @error('cover') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        @if ($isEditing && $material?->cover_url)
+                            <label class="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                                <input type="checkbox" name="remove_cover" value="1" @checked(old('remove_cover'))
+                                       class="rounded border-slate-300">
+                                Quitar la portada actual
+                            </label>
+                        @endif
                     </div>
 
                     <div class="md:col-span-2">

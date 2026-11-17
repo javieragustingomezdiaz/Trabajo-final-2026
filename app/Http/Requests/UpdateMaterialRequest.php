@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Material;
 use App\Services\MaterialSpecializationRegistry;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Support\Facades\Gate;
 
 class UpdateMaterialRequest extends FormRequest
@@ -28,7 +29,8 @@ class UpdateMaterialRequest extends FormRequest
             'dimension' => ['nullable', 'string', 'max:255'],
             'extent' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'cover' => ['nullable', 'string', 'max:255'],
+            'cover' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png', 'webp'])->max(2048)],
+            'remove_cover' => ['sometimes', 'boolean'],
 
             'publisher_id' => ['required', 'integer', 'exists:publishers,id'],
             'identifier_type_id' => ['required', 'integer', 'exists:identifier_types,id'],

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Material;
 use App\Models\MaterialType;
+use App\Services\MaterialSpecializationRegistry;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -12,6 +13,7 @@ class OpacController extends Controller
     public function index(Request $request): View
     {
         $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
             'title' => ['nullable', 'string', 'max:100'],
             'author' => ['nullable', 'string', 'max:100'],
             'topic' => ['nullable', 'string', 'max:100'],
@@ -28,6 +30,9 @@ class OpacController extends Controller
         }
 
         $hasCriteria = collect($filters)->contains(fn ($value) => $value !== null && $value !== '');
+        $advancedFiltersActive = collect($filters)
+            ->except('q')
+            ->contains(fn ($value) => $value !== null && $value !== '');
         $searchAttempted = $request->query->count() > 0;
 
         $materials = Material::query()
@@ -40,6 +45,14 @@ class OpacController extends Controller
                     ->whereHas('status', fn ($statusQuery) => $statusQuery->where('name', 'Disponible')),
             ])
             ->when(! $hasCriteria, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when(($filters['q'] ?? '') !== '', fn ($query) => $query->where(function ($query) use ($filters): void {
+                $term = $filters['q'];
+                $query->where('title', 'like', "%{$term}%")
+                    ->orWhere('identifier_value', 'like', "%{$term}%")
+                    ->orWhereHas('authors', fn ($authors) => $authors->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('topics', fn ($topics) => $topics->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('publisher', fn ($publishers) => $publishers->where('name', 'like', "%{$term}%"));
+            }))
             ->when(($filters['title'] ?? '') !== '', fn ($query) =>
                 $query->where('title', 'like', "%{$filters['title']}%"))
             ->when(($filters['author'] ?? '') !== '', fn ($query) =>
@@ -63,13 +76,17 @@ class OpacController extends Controller
         return view('opac.index', compact(
             'filters',
             'hasCriteria',
+            'advancedFiltersActive',
             'searchAttempted',
             'materials',
             'materialTypes',
         ));
     }
 
-    public function show(Material $material): View
+    public function show(
+        Material $material,
+        MaterialSpecializationRegistry $registry
+    ): View
     {
         abort_unless($material->is_active, 404);
 
@@ -89,6 +106,29 @@ class OpacController extends Controller
                 ->orderBy('barcode'),
         ]);
 
-        return view('opac.show', compact('material'));
+        $specialization = $registry->forType($material->materialType);
+        $relation = $specialization['relation'];
+
+        $material->load($relation);
+        $specializationRecord = $material->getRelation($relation);
+        $specializationValues = [];
+
+        if ($specializationRecord) {
+            foreach ($specialization['fields'] as $field) {
+                $value = $specializationRecord->{$field};
+
+                if (in_array($field, $specialization['booleans'], true)) {
+                    $specializationValues[$field] = (bool) $value;
+                } elseif ($value !== null && $value !== '') {
+                    $specializationValues[$field] = $value;
+                }
+            }
+        }
+
+        return view('opac.show', compact(
+            'material',
+            'specialization',
+            'specializationValues',
+        ));
     }
 }

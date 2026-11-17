@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Material extends Model
 {
@@ -41,6 +42,23 @@ class Material extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    public function getCoverUrlAttribute(): ?string
+    {
+        if (! $this->cover) {
+            return null;
+        }
+
+        if (Str::startsWith($this->cover, ['https://', 'http://'])) {
+            return $this->cover;
+        }
+
+        $path = Str::startsWith($this->cover, 'storage/')
+            ? $this->cover
+            : 'storage/' . ltrim($this->cover, '/');
+
+        return asset($path);
     }
 
     public function publisher(): BelongsTo

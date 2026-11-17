@@ -7,7 +7,12 @@ use App\Models\Material;
 use App\Models\MaterialType;
 use App\Models\Topic;
 use Illuminate\Support\Arr;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
 
 class MaterialCatalogService
 {
@@ -16,15 +21,26 @@ class MaterialCatalogService
         MaterialType $materialType,
         array $specialization
     ): Material {
-        return DB::transaction(function () use ($data, $materialType, $specialization): Material {
-            $materialData = $this->materialData($data, $specialization);
-            $materialData['material_type_id'] = $materialType->id;
+        $coverPath = $this->storeCover($data['cover'] ?? null);
 
-            $material = Material::create($materialData);
-            $this->saveRelatedData($material, $data, $specialization);
+        try {
+            return DB::transaction(function () use ($data, $materialType, $specialization, $coverPath): Material {
+                $materialData = $this->materialData($data, $specialization);
+                $materialData['material_type_id'] = $materialType->id;
+                $materialData['cover'] = $coverPath;
 
-            return $material;
-        });
+                $material = Material::create($materialData);
+                $this->saveRelatedData($material, $data, $specialization);
+
+                return $material;
+            });
+        } catch (Throwable $exception) {
+            if ($coverPath) {
+                Storage::disk('public')->delete($coverPath);
+            }
+
+            throw $exception;
+        }
     }
 
     public function update(
@@ -32,23 +48,73 @@ class MaterialCatalogService
         array $data,
         array $specialization
     ): Material {
-        return DB::transaction(function () use ($material, $data, $specialization): Material {
-            $material->update($this->materialData($data, $specialization));
-            $this->saveRelatedData($material, $data, $specialization);
+        $newCoverPath = $this->storeCover($data['cover'] ?? null);
+        $removeCover = ! $newCoverPath && (bool) ($data['remove_cover'] ?? false);
+        $oldCoverPath = $material->cover;
 
-            return $material->refresh();
-        });
+        try {
+            $updatedMaterial = DB::transaction(function () use ($material, $data, $specialization, $newCoverPath, $removeCover): Material {
+                $materialData = $this->materialData($data, $specialization);
+
+                if ($newCoverPath) {
+                    $materialData['cover'] = $newCoverPath;
+                } elseif ($removeCover) {
+                    $materialData['cover'] = null;
+                }
+
+                $material->update($materialData);
+                $this->saveRelatedData($material, $data, $specialization);
+
+                return $material->refresh();
+            });
+        } catch (Throwable $exception) {
+            if ($newCoverPath) {
+                Storage::disk('public')->delete($newCoverPath);
+            }
+
+            throw $exception;
+        }
+
+        if (($newCoverPath || $removeCover) && $oldCoverPath) {
+            $this->deleteStoredCover($oldCoverPath);
+        }
+
+        return $updatedMaterial;
     }
 
     private function materialData(array $data, array $specialization): array
     {
         return Arr::except($data, [
             ...$specialization['fields'],
+            'cover',
+            'remove_cover',
             'author_ids',
             'topic_ids',
             'new_authors',
             'new_topics',
         ]);
+    }
+
+    private function storeCover(?UploadedFile $cover): ?string
+    {
+        if (! $cover) {
+            return null;
+        }
+
+        $path = $cover->store('covers', 'public');
+
+        if (! is_string($path)) {
+            throw new RuntimeException('No se pudo guardar la portada.');
+        }
+
+        return $path;
+    }
+
+    private function deleteStoredCover(string $path): void
+    {
+        if (Str::startsWith($path, 'covers/')) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function saveRelatedData(

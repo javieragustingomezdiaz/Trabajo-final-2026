@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\File;
 use App\Models\Material;
 use App\Models\MaterialType;
 use App\Services\MaterialSpecializationRegistry;
@@ -30,7 +31,7 @@ class StoreMaterialRequest extends FormRequest
             'dimension' => ['nullable', 'string', 'max:255'],
             'extent' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'cover' => ['nullable', 'string', 'max:255'],
+            'cover' => ['nullable', File::image()->types(['jpg', 'jpeg', 'png', 'webp'])->max(2048)],
 
             'publisher_id' => ['required', 'integer', 'exists:publishers,id'],
             'identifier_type_id' => ['required', 'integer', 'exists:identifier_types,id'],

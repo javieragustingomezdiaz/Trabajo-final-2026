@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MusicalMaterial extends Model
 {
+    protected $primaryKey = 'material_id';
+
+    public $incrementing = false;
+
+    protected $keyType = 'int';
+
     protected $fillable = [
         'material_id',
         'musical_notation',
