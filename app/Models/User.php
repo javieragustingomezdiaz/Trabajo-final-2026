@@ -45,6 +45,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -66,6 +67,21 @@ class User extends Authenticatable
     public function approvals(): HasMany
     {
         return $this->hasMany(UserApproval::class, 'evaluator_id');
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function circulations(): HasMany
+    {
+        return $this->hasMany(Circulation::class);
+    }
+
+    public function sanctions(): HasMany
+    {
+        return $this->hasMany(Sanction::class);
     }
 
     public function hasPermission(string $permission): bool

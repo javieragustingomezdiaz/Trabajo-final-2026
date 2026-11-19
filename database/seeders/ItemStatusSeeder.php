@@ -17,6 +17,7 @@ class ItemStatusSeeder extends Seeder
             'Disponible',
             'Prestado',
             'Reservado',
+            'Reservado para retiro',
             'En reparación',
             'Perdido',
             'Retirado',

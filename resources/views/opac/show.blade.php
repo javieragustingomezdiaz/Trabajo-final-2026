@@ -2,6 +2,13 @@
     <section class="mx-auto max-w-3xl">
         <a href="{{ route('opac.index') }}" class="text-sm font-medium text-blue-700 hover:underline">← Volver al catálogo</a>
 
+        @if (session('status'))
+            <p class="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status">{{ session('status') }}</p>
+        @endif
+        @if ($errors->has('reservation'))
+            <p class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{{ $errors->first('reservation') }}</p>
+        @endif
+
         <article class="mt-4 rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
             <section class="border-b border-slate-200 pb-6">
                 <div class="flex flex-col gap-10 sm:flex-row">
@@ -132,6 +139,13 @@
                     <div>
                         <h2 class="text-lg font-semibold text-slate-900">Ejemplares</h2>
                     </div>
+                    @auth
+                        @can('create', \App\Models\Reservation::class)
+                            <a href="{{ route('reservations.create', $material) }}" class="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800">Reservar material</a>
+                        @endcan
+                    @else
+                        <a href="{{ route('login') }}" class="text-sm font-medium text-blue-700 hover:underline">Iniciá sesión para reservar</a>
+                    @endauth
                 </div>
 
                 <div>

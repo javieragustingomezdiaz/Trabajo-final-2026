@@ -43,4 +43,9 @@ class Item extends Model
     {
         return $this->belongsTo(ItemStatus::class, 'item_status_id');
     }
+
+    public function reservations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
 }

@@ -8,9 +8,16 @@ use App\Http\Controllers\MaterialController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\OpacController;
+use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\MyReservationController;
+use App\Http\Controllers\StaffReservationController;
 
 Route::get('/opac', [OpacController::class, 'index'])->name('opac.index');
 Route::get('/opac/materials/{material}', [OpacController::class, 'show'])->name('opac.materials.show');
+Route::get('/reservations/{reservation}/confirm/{token}', [ReservationController::class, 'confirmation'])
+    ->middleware('signed')->name('reservations.confirmation');
+Route::post('/reservations/{reservation}/confirm/{token}', [ReservationController::class, 'confirm'])
+    ->middleware('signed')->name('reservations.confirm');
 
 Route::middleware('guest')->group(function() {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
@@ -90,6 +97,23 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/items/{item}/activate', [ItemController::class, 'activate'])
         ->name('items.activate');
+
+    Route::get('/opac/materials/{material}/reserve', [ReservationController::class, 'create'])
+        ->name('reservations.create');
+    Route::post('/opac/materials/{material}/reserve', [ReservationController::class, 'store'])
+        ->name('reservations.store');
+
+    Route::patch('/mis-reservas/{reservation}/cancel', [ReservationController::class, 'cancelOwn'])
+        ->name('reservations.cancel-own');
+
+    Route::get('/staff-reservations/create', [StaffReservationController::class, 'create'])
+        ->name('staff-reservations.create');
+
+    Route::post('/staff-reservations', [StaffReservationController::class, 'store'])
+        ->name('staff-reservations.store');
+
+    Route::get('/mis-reservas', [MyReservationController::class, 'index'])
+        ->name('reservations.mine');
 });
 
 Route::redirect('/', '/opac');

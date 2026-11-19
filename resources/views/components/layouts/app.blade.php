@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Archivium' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body class="min-h-screen bg-stone-100">
     @auth
@@ -49,6 +50,22 @@
                             <span class="hidden md:inline">Ejemplares</span>
                         </a>
 
+                        <a href="{{ route('staff-reservations.create') }}"
+                        title="Registrar reserva"
+                        class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">＋</span>
+                            <span class="hidden md:inline">Reservar para socio</span>
+                        </a>
+
+                    @endif
+
+                    @if (auth()->user()->role?->name === 'member')
+                        <a href="{{ route('reservations.mine') }}"
+                        title="Mis reservas"
+                        class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">▤</span>
+                            <span class="hidden md:inline">Mis reservas</span>
+                        </a>
                     @endif
                 </nav>
 
@@ -72,5 +89,6 @@
             {{ $slot }}
         </main>
     @endauth
+    @livewireScripts
 </body>
 </html>
