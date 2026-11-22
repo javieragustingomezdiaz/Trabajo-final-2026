@@ -3,16 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Material;
-use App\Models\Item;
-use App\Models\ItemStatus;
 use App\Models\Reservation;
-use App\Models\ReservationStatus;
+use App\Services\ReservationCancellationService;
 use App\Services\ReservationService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 class ReservationController extends Controller
@@ -61,7 +58,12 @@ class ReservationController extends Controller
 
         $reservation->load(['material.authors', 'material.materialType', 'item.container.location']);
 
-        return view('reservations.confirmation', compact('reservation', 'token'));
+        $expiresAt = $reservation->confirmation_expires_at;
+        $routeParameters = ['reservation' => $reservation->id, 'token' => $token];
+        $confirmUrl = URL::temporarySignedRoute('reservations.confirm', $expiresAt, $routeParameters);
+        $rejectUrl = URL::temporarySignedRoute('reservations.reject', $expiresAt, $routeParameters);
+
+        return view('reservations.confirmation', compact('reservation', 'confirmUrl', 'rejectUrl'));
     }
 
     public function confirm(Request $request, Reservation $reservation, string $token, ReservationService $service): RedirectResponse
@@ -73,62 +75,23 @@ class ReservationController extends Controller
             ->with('status', 'Reserva confirmada. Podés retirar el ejemplar hasta el ' . $confirmed->withdrawal_deadline->format('d/m/Y H:i') . '.');
     }
 
-    public function cancelOwn(Reservation $reservation): RedirectResponse
+    public function reject(Request $request, Reservation $reservation, string $token, ReservationService $service): RedirectResponse
+    {
+        $request->validate(['reject' => ['required', 'accepted']]);
+        $rejected = $service->rejectWaitlistReservation($reservation, $token);
+
+        return redirect()->route('opac.materials.show', $rejected->material_id)
+            ->with('status', 'Rechazaste la oferta. El ejemplar se ofrecerá al siguiente socio de la cola.');
+    }
+
+    public function cancelOwn(
+        Reservation $reservation,
+        Request $request,
+        ReservationCancellationService $cancellationService
+    ): RedirectResponse
     {
         $this->authorize('cancelOwn', $reservation);
-
-        DB::transaction(function () use ($reservation): void {
-            $reservation = Reservation::query()
-                ->with('status')
-                ->whereKey($reservation->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $this->authorize('cancelOwn', $reservation);
-
-            $activeStatuses = [
-                Reservation::STATUS_WAITING,
-                Reservation::STATUS_NOTIFIED,
-                Reservation::STATUS_READY,
-            ];
-
-            if (! in_array($reservation->status?->name, $activeStatuses, true)) {
-                throw ValidationException::withMessages([
-                    'reservation' => 'Esta reserva ya no está activa y no se puede cancelar.',
-                ]);
-            }
-
-            $itemId = $reservation->item_id;
-            $cancelledStatus = ReservationStatus::firstOrCreate([
-                'name' => Reservation::STATUS_CANCELLED,
-            ]);
-
-            $reservation->update([
-                'reservation_status_id' => $cancelledStatus->id,
-                'cancelled_at' => now(),
-                'confirmation_token' => null,
-                'confirmation_expires_at' => null,
-            ]);
-
-            if (! $itemId) {
-                return;
-            }
-
-            $item = Item::query()
-                ->with('status')
-                ->whereKey($itemId)
-                ->lockForUpdate()
-                ->first();
-
-            if (
-                $item
-                && $item->is_active
-                && in_array($item->status?->name, ['Reservado', 'Reservado para retiro'], true)
-            ) {
-                $availableStatus = ItemStatus::firstOrCreate(['name' => 'Disponible']);
-                $item->update(['item_status_id' => $availableStatus->id]);
-            }
-        });
+        $cancellationService->cancel($reservation, $request->user());
 
         return redirect()
             ->route('reservations.mine', ['vista' => 'activas'])

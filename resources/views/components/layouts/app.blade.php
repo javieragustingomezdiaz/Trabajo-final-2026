@@ -36,6 +36,18 @@
                     @endif
 
                     @if (in_array(auth()->user()->role?->name, ['admin', 'librarian'], true))
+                        <a href="{{ route('loan-terms.index') }}"
+                           title="Reglas de préstamo"
+                           class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">⚖</span>
+                            <span class="hidden md:inline">Reglas de préstamo</span>
+                        </a>
+                        <a href="{{ route('global-rules.edit') }}"
+                           title="Parámetros globales"
+                           class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">⚙</span>
+                            <span class="hidden md:inline">Parámetros globales</span>
+                        </a>
                         <a href="{{ route('materials.search') }}"
                            title="Buscar material"
                            class="rounded px-3 py-2 hover:bg-slate-700">
@@ -55,6 +67,27 @@
                         class="rounded px-3 py-2 hover:bg-slate-700">
                             <span class="md:hidden" aria-hidden="true">＋</span>
                             <span class="hidden md:inline">Reservar para socio</span>
+                        </a>
+
+                        <a href="{{ route('circulations.create') }}"
+                           title="Registrar préstamo"
+                           class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">↗</span>
+                            <span class="hidden md:inline">Registrar préstamo</span>
+                        </a>
+
+                        <a href="{{ route('circulations.index') }}"
+                           title="Buscar préstamos"
+                           class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">⌕</span>
+                            <span class="hidden md:inline">Buscar préstamos</span>
+                        </a>
+
+                        <a href="{{ route('staff-reservations.index') }}"
+                        title="Buscar reservas"
+                        class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">⌕</span>
+                            <span class="hidden md:inline">Buscar reservas</span>
                         </a>
 
                     @endif

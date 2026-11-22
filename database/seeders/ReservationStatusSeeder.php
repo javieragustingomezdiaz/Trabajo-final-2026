@@ -16,6 +16,7 @@ class ReservationStatusSeeder extends Seeder
             'Retirada',
             'Cancelada',
             'Vencida',
+            'Rechazada',
         ] as $name) {
             DB::table('reservation_statuses')->updateOrInsert(
                 ['name' => $name],

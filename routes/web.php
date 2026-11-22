@@ -11,6 +11,9 @@ use App\Http\Controllers\OpacController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\MyReservationController;
 use App\Http\Controllers\StaffReservationController;
+use App\Http\Controllers\LoanTermController;
+use App\Http\Controllers\GlobalRuleController;
+use App\Http\Controllers\CirculationController;
 
 Route::get('/opac', [OpacController::class, 'index'])->name('opac.index');
 Route::get('/opac/materials/{material}', [OpacController::class, 'show'])->name('opac.materials.show');
@@ -18,6 +21,8 @@ Route::get('/reservations/{reservation}/confirm/{token}', [ReservationController
     ->middleware('signed')->name('reservations.confirmation');
 Route::post('/reservations/{reservation}/confirm/{token}', [ReservationController::class, 'confirm'])
     ->middleware('signed')->name('reservations.confirm');
+Route::post('/reservations/{reservation}/reject/{token}', [ReservationController::class, 'reject'])
+    ->middleware('signed')->name('reservations.reject');
 
 Route::middleware('guest')->group(function() {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
@@ -35,6 +40,30 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('roles', RoleController::class)
         ->except(['destroy']);
+
+    Route::get('/loan-terms', [LoanTermController::class, 'index'])
+        ->name('loan-terms.index');
+
+    Route::get('/loan-terms/{materialType}/edit', [LoanTermController::class, 'edit'])
+        ->name('loan-terms.edit');
+
+    Route::put('/loan-terms/{materialType}', [LoanTermController::class, 'update'])
+        ->name('loan-terms.update');
+
+    Route::get('/global-rules', [GlobalRuleController::class, 'edit'])
+        ->name('global-rules.edit');
+
+    Route::put('/global-rules', [GlobalRuleController::class, 'update'])
+        ->name('global-rules.update');
+
+    Route::get('/circulations/create', [CirculationController::class, 'create'])
+        ->name('circulations.create');
+
+    Route::post('/circulations', [CirculationController::class, 'store'])
+        ->name('circulations.store');
+
+    Route::get('/circulations', [CirculationController::class, 'index'])
+        ->name('circulations.index');
 
     Route::patch('/roles/{role}/deactivate', [RoleController::class, 'deactivate'])
         ->name('roles.deactivate');
@@ -111,6 +140,15 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/staff-reservations', [StaffReservationController::class, 'store'])
         ->name('staff-reservations.store');
+
+    Route::get('/staff-reservations', [StaffReservationController::class, 'index'])
+        ->name('staff-reservations.index');
+
+    Route::get('/staff-reservations/{reservation}/cancel', [StaffReservationController::class, 'cancelForm'])
+        ->name('staff-reservations.cancel-form');
+
+    Route::patch('/staff-reservations/{reservation}/cancel', [StaffReservationController::class, 'cancel'])
+        ->name('staff-reservations.cancel');
 
     Route::get('/mis-reservas', [MyReservationController::class, 'index'])
         ->name('reservations.mine');

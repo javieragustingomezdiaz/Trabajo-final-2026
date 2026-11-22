@@ -13,6 +13,13 @@ class Reservation extends Model
     public const STATUS_PICKED_UP = 'Retirada';
     public const STATUS_CANCELLED = 'Cancelada';
     public const STATUS_EXPIRED = 'Vencida';
+    public const STATUS_REJECTED = 'Rechazada';
+
+    public const ACTIVE_STATUSES = [
+        self::STATUS_WAITING,
+        self::STATUS_NOTIFIED,
+        self::STATUS_READY,
+    ];
 
     protected $fillable = [
         'registration_date',
@@ -26,6 +33,8 @@ class Reservation extends Model
         'confirmation_expires_at',
         'confirmation_token',
         'cancelled_at',
+        'cancellation_reason',
+        'cancelled_by_user_id',
     ];
 
     protected function casts(): array
@@ -58,5 +67,15 @@ class Reservation extends Model
     public function status(): BelongsTo
     {
         return $this->belongsTo(ReservationStatus::class, 'reservation_status_id');
+    }
+
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by_user_id');
+    }
+
+    public function isCancellable(): bool
+    {
+        return in_array($this->status?->name, self::ACTIVE_STATUSES, true);
     }
 }

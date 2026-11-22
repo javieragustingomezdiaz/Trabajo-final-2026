@@ -12,11 +12,18 @@
                 <div class="grid grid-cols-[9rem_minmax(0,1fr)] gap-3 py-3"><dt class="font-medium text-slate-500">Confirmar antes de</dt><dd>{{ $reservation->confirmation_expires_at->format('d/m/Y H:i') }}</dd></div>
             </dl>
 
-            <form method="POST" action="{{ URL::temporarySignedRoute('reservations.confirm', $reservation->confirmation_expires_at, ['reservation' => $reservation->id, 'token' => $token]) }}" class="mt-6">
+            <div class="mt-6 flex flex-wrap gap-3">
+            <form method="POST" action="{{ $confirmUrl }}">
                 @csrf
                 <input type="hidden" name="confirm" value="1">
                 <button type="submit" class="rounded-md bg-blue-700 px-5 py-3 text-sm font-medium text-white hover:bg-blue-800">Confirmar reserva</button>
             </form>
+            <form method="POST" action="{{ $rejectUrl }}">
+                @csrf
+                <input type="hidden" name="reject" value="1">
+                <button type="submit" class="rounded-md border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">Rechazar oferta</button>
+            </form>
+            </div>
         </article>
     </section>
 </x-layouts.opac>

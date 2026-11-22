@@ -28,4 +28,18 @@ class ReservationPolicy
             && (bool) $user->role?->is_active
             && in_array($user->role?->name, ['admin', 'librarian'], true);
     }
+
+    public function viewAnyForStaff(User $user): bool
+    {
+        return (bool) $user->is_active
+            && (bool) $user->role?->is_active
+            && in_array($user->role?->name, ['admin', 'librarian'], true);
+    }
+
+    public function cancelForMember(User $user, Reservation $reservation): bool
+    {
+        return (bool) $user->is_active
+            && (bool) $user->role?->is_active
+            && in_array($user->role?->name, ['admin', 'librarian'], true);
+    }
 }

@@ -15,6 +15,10 @@ use Illuminate\Support\Str;
 
 class ReservationQueueService
 {
+    public function __construct(private readonly GlobalRuleService $globalRuleService)
+    {
+    }
+
     public function process(): int
     {
         $this->expireOffers();
@@ -102,7 +106,7 @@ class ReservationQueueService
                 'reservation_status_id' => $notified->id,
                 'item_id' => $item->id,
                 'notified_at' => $now,
-                'confirmation_expires_at' => $now->copy()->addHours(6),
+                'confirmation_expires_at' => $now->copy()->addHours(max(1, $this->globalRuleService->current()->reservation_offer_hours)),
                 'confirmation_token' => $token,
             ]);
             $item->update(['item_status_id' => $reserved->id]);

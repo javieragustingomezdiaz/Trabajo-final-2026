@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('reservations:process-queue')->everyMinute()->withoutOverlapping();
+Schedule::command('circulations:mark-overdue')->everyMinute()->withoutOverlapping();

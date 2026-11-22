@@ -29,8 +29,17 @@ class LoanTerm extends Model
         return [
             'bookable' => 'boolean',
             'hours_on_standby' => 'integer',
+            'is_home_loanable' => 'boolean',
+            'home_loan_days' => 'integer',
+            'allow_in_library_use' => 'boolean',
+            'in_library_loan_hours' => 'integer',
+            'is_renewable' => 'boolean',
+            'max_renewal' => 'integer',
+            'renewal_days' => 'integer',
             'max_simultaneous_reservations' => 'integer',
             'max_simultaneous_loans' => 'integer',
+            'sanctions_days_factor' => 'integer',
+            'damage_suspension_days' => 'integer',
         ];
     }
 

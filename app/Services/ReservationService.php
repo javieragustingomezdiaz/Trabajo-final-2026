@@ -20,6 +20,12 @@ class ReservationService
 
     private const DEFAULT_PICKUP_HOURS = 24;
 
+    public function __construct(
+        private readonly ReservedItemReleaseService $reservedItemReleaseService,
+        private readonly GlobalRuleService $globalRuleService
+    ) {
+    }
+
     public function preview(User $user, Material $material, bool $forStaff = false): array
     {
         $this->assertEligible($user, $material, $forStaff);
@@ -111,30 +117,8 @@ class ReservationService
     public function confirmWaitlistReservation(Reservation $reservation, string $token): Reservation
     {
         return DB::transaction(function () use ($reservation, $token): Reservation {
-            $lockedReservation = Reservation::query()
-                ->with(['material.materialType.loanTerm'])
-                ->whereKey($reservation->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if (
-                $lockedReservation->status?->name !== Reservation::STATUS_NOTIFIED
-                || ! $lockedReservation->confirmation_token
-                || ! hash_equals($lockedReservation->confirmation_token, $token)
-                || ! $lockedReservation->confirmation_expires_at
-                || $lockedReservation->confirmation_expires_at->isPast()
-            ) {
-                throw ValidationException::withMessages([
-                    'reservation' => 'El plazo para confirmar esta reserva venció o el enlace ya no es válido.',
-                ]);
-            }
-
-            $item = Item::query()->whereKey($lockedReservation->item_id)->lockForUpdate()->first();
-            if (! $item || ! $item->is_active) {
-                throw ValidationException::withMessages([
-                    'reservation' => 'El ejemplar asignado ya no está disponible para esta reserva.',
-                ]);
-            }
+            $lockedReservation = $this->lockValidOffer($reservation, $token);
+            $item = $this->lockOfferedItem($lockedReservation);
 
             $readyStatus = ReservationStatus::firstOrCreate(['name' => Reservation::STATUS_READY]);
             $pickupStatus = ItemStatus::firstOrCreate(['name' => 'Reservado para retiro']);
@@ -150,6 +134,65 @@ class ReservationService
 
             return $lockedReservation->refresh()->load('status', 'material');
         });
+    }
+
+    public function rejectWaitlistReservation(Reservation $reservation, string $token): Reservation
+    {
+        return DB::transaction(function () use ($reservation, $token): Reservation {
+            $lockedReservation = $this->lockValidOffer($reservation, $token);
+            $item = $this->lockOfferedItem($lockedReservation);
+            $rejectedStatus = ReservationStatus::firstOrCreate(['name' => Reservation::STATUS_REJECTED]);
+
+            $lockedReservation->update([
+                'reservation_status_id' => $rejectedStatus->id,
+                'confirmation_expires_at' => null,
+                'confirmation_token' => null,
+            ]);
+
+            $this->reservedItemReleaseService->release($item->id);
+
+            return $lockedReservation->refresh()->load('status', 'material', 'item');
+        });
+    }
+
+    private function lockValidOffer(Reservation $reservation, string $token): Reservation
+    {
+        $lockedReservation = Reservation::query()
+            ->with(['material.materialType.loanTerm', 'status'])
+            ->whereKey($reservation->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        if (
+            $lockedReservation->status?->name !== Reservation::STATUS_NOTIFIED
+            || ! $lockedReservation->confirmation_token
+            || ! hash_equals($lockedReservation->confirmation_token, $token)
+            || ! $lockedReservation->confirmation_expires_at
+            || $lockedReservation->confirmation_expires_at->isPast()
+        ) {
+            throw ValidationException::withMessages([
+                'reservation' => 'La oferta ya venció o el enlace de confirmación no es válido.',
+            ]);
+        }
+
+        return $lockedReservation;
+    }
+
+    private function lockOfferedItem(Reservation $reservation): Item
+    {
+        $item = Item::query()
+            ->with('status')
+            ->whereKey($reservation->item_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $item || ! $item->is_active || $item->status?->name !== 'Reservado') {
+            throw ValidationException::withMessages([
+                'reservation' => 'El ejemplar asignado ya no está disponible para esta oferta.',
+            ]);
+        }
+
+        return $item;
     }
 
     public function pickupHours(Material $material): int
@@ -208,6 +251,22 @@ class ReservationService
             ]);
         }
 
+        $hasOverdueLoan = Circulation::query()
+            ->where('user_id', $user->id)
+            ->whereNull('actual_return_date')
+            ->where(fn ($query) => $query
+                ->where('estimated_return_date', '<', $now)
+                ->orWhereHas('status', fn ($status) => $status->where('name', Circulation::STATUS_OVERDUE)))
+            ->exists();
+
+        if ($hasOverdueLoan) {
+            throw ValidationException::withMessages([
+                'reservation' => $forStaff
+                    ? 'El socio tiene préstamos demorados y no puede reservar materiales.'
+                    : 'Tenés préstamos demorados y no podés reservar materiales.',
+            ]);
+        }
+
         $activeReservationStatuses = [
             Reservation::STATUS_WAITING,
             Reservation::STATUS_NOTIFIED,
@@ -242,6 +301,20 @@ class ReservationService
             ]);
         }
 
+        $globalRule = $this->globalRuleService->current();
+        $reservationsForPatron = Reservation::query()
+            ->where('user_id', $user->id)
+            ->whereHas('status', fn ($query) => $query->whereIn('name', Reservation::ACTIVE_STATUSES))
+            ->count();
+
+        if ($reservationsForPatron >= $globalRule->max_simultaneous_reservations) {
+            throw ValidationException::withMessages([
+                'reservation' => $forStaff
+                    ? 'El socio alcanzó el máximo global de reservas simultáneas permitido.'
+                    : 'Alcanzaste el máximo global de reservas simultáneas permitido.',
+            ]);
+        }
+
         if (! $loanTerm) {
             return;
         }
@@ -262,21 +335,6 @@ class ReservationService
             }
         }
 
-        if ($loanTerm->max_simultaneous_loans !== null) {
-            $loansForType = Circulation::query()
-                ->where('user_id', $user->id)
-                ->whereNull('actual_return_date')
-                ->whereHas('item.material', fn ($query) => $query->where('material_type_id', $material->material_type_id))
-                ->count();
-
-            if ($loansForType >= $loanTerm->max_simultaneous_loans) {
-                throw ValidationException::withMessages([
-                    'reservation' => $forStaff
-                        ? 'El socio alcanzó el máximo de préstamos simultáneos permitido para este tipo de material.'
-                        : 'Alcanzaste el máximo de préstamos simultáneos permitido para este tipo de material.',
-                ]);
-            }
-        }
     }
 
     private function queueQuery(Material $material)
