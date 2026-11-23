@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
@@ -82,6 +83,20 @@ class User extends Authenticatable
     public function sanctions(): HasMany
     {
         return $this->hasMany(Sanction::class);
+    }
+
+    public function accountDeactivationReason(): ?string
+    {
+        $observation = $this->circulations()
+            ->whereHas('status', fn ($query) => $query->where('name', Circulation::STATUS_LOST))
+            ->latest('id')
+            ->value('observation');
+
+        if (! $observation || ! Str::contains($observation, 'Préstamo marcado como perdido:')) {
+            return null;
+        }
+
+        return trim(Str::after($observation, 'Préstamo marcado como perdido:')) ?: null;
     }
 
     public function hasPermission(string $permission): bool

@@ -8,6 +8,12 @@
             Ingresá con tu email o nombre de usuario.
         </p>
 
+        @if (session('account_disabled_message'))
+            <div class="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+                {{ session('account_disabled_message') }}
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('login') }}" class="mt-6 space-y-5">
             @csrf
 

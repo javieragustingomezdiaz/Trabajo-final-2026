@@ -9,6 +9,10 @@ use Illuminate\Support\Collection;
 
 class CirculationSearchService
 {
+    public function __construct(private readonly CirculationRenewalService $renewalService)
+    {
+    }
+
     public function statuses(): Collection
     {
         return LoanStatus::query()->orderBy('name')->get();
@@ -16,8 +20,8 @@ class CirculationSearchService
 
     public function search(array $filters): LengthAwarePaginator
     {
-        return Circulation::query()
-            ->with(['user.person', 'item.material.materialType', 'status'])
+        $circulations = Circulation::query()
+            ->with(['user.person', 'item.material.materialType.loanTerm', 'item.status', 'status'])
             ->when($filters['fecha_desde'] ?? null, fn ($query, $date) =>
                 $query->whereDate('loan_date', '>=', $date))
             ->when($filters['fecha_hasta'] ?? null, fn ($query, $date) =>
@@ -41,5 +45,11 @@ class CirculationSearchService
             ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString();
+
+        $circulations->getCollection()->each(function (Circulation $circulation): void {
+            $circulation->setAttribute('can_renew', $this->renewalService->canRenew($circulation));
+        });
+
+        return $circulations;
     }
 }

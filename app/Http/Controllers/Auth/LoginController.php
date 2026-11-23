@@ -38,7 +38,6 @@ class LoginController extends Controller
         }
 
         $user = User::query()
-            ->where('is_active', true)
             ->whereHas('person', function ($personQuery) use ($login): void {
                 $personQuery->where('email', $login)
                     ->orWhere('name', $login)
@@ -52,6 +51,17 @@ class LoginController extends Controller
             throw ValidationException::withMessages([
                 'login' => 'Las credenciales no son correctas.',
             ]);
+        }
+
+        if (! $user->is_active) {
+            RateLimiter::clear($key);
+
+            $reason = $user->accountDeactivationReason();
+            $message = $reason
+                ? 'La cuenta está deshabilitada. Motivo: ' . $reason
+                : 'La cuenta está deshabilitada. Contactá al personal de la biblioteca.';
+
+            throw ValidationException::withMessages(['login' => $message]);
         }
 
         Auth::login($user, $request->boolean('remember'));

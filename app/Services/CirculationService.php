@@ -156,8 +156,8 @@ class CirculationService
     private function ensureNoOverdueLoans(User $member): void
     {
         $hasOverdueLoan = Circulation::query()
+            ->active()
             ->where('user_id', $member->id)
-            ->whereNull('actual_return_date')
             ->where(fn ($query) => $query
                 ->where('estimated_return_date', '<', now())
                 ->orWhereHas('status', fn ($status) => $status->where('name', Circulation::STATUS_OVERDUE)))
@@ -194,8 +194,8 @@ class CirculationService
             ->exists();
 
         $hasActiveLoan = Circulation::query()
+            ->active()
             ->where('user_id', $member->id)
-            ->whereNull('actual_return_date')
             ->whereHas('item', fn ($query) => $query->where('material_id', $materialId))
             ->exists();
 
@@ -224,8 +224,8 @@ class CirculationService
     private function ensureItemHasNoActiveLoan(Item $item): void
     {
         $hasActiveLoan = Circulation::query()
+            ->active()
             ->where('item_id', $item->id)
-            ->whereNull('actual_return_date')
             ->exists();
 
         if ($hasActiveLoan) {
@@ -242,8 +242,8 @@ class CirculationService
         GlobalRule $globalRule
     ): void {
         $activeLoans = Circulation::query()
-            ->where('user_id', $member->id)
-            ->whereNull('actual_return_date');
+            ->active()
+            ->where('user_id', $member->id);
 
         if ($activeLoans->count() >= $globalRule->max_simultaneous_loans) {
             throw ValidationException::withMessages([
@@ -253,8 +253,8 @@ class CirculationService
 
         if ($loanTerm->max_simultaneous_loans !== null) {
             $loansForType = Circulation::query()
+                ->active()
                 ->where('user_id', $member->id)
-                ->whereNull('actual_return_date')
                 ->whereHas('item.material', fn ($query) => $query->where('material_type_id', $materialTypeId))
                 ->count();
 

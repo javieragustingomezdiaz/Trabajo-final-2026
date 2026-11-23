@@ -18,4 +18,19 @@ class CirculationPolicy
             && (bool) $user->role?->is_active
             && in_array($user->role?->name, ['admin', 'librarian'], true);
     }
+
+    public function renew(User $user, Circulation $circulation): bool
+    {
+        return $this->create($user);
+    }
+
+    public function recordReturn(User $user, Circulation $circulation): bool
+    {
+        return $this->create($user);
+    }
+
+    public function markLost(User $user, Circulation $circulation): bool
+    {
+        return $this->create($user);
+    }
 }

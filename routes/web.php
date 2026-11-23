@@ -14,6 +14,8 @@ use App\Http\Controllers\StaffReservationController;
 use App\Http\Controllers\LoanTermController;
 use App\Http\Controllers\GlobalRuleController;
 use App\Http\Controllers\CirculationController;
+use App\Http\Controllers\MyLoanController;
+use App\Http\Middleware\EnsureActiveAccount;
 
 Route::get('/opac', [OpacController::class, 'index'])->name('opac.index');
 Route::get('/opac/materials/{material}', [OpacController::class, 'show'])->name('opac.materials.show');
@@ -33,7 +35,7 @@ Route::middleware('guest')->group(function() {
     Route::post('/login', [LoginController::class, 'store']);
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', EnsureActiveAccount::class])->group(function () {
 
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
@@ -64,6 +66,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/circulations', [CirculationController::class, 'index'])
         ->name('circulations.index');
+
+    Route::patch('/circulations/{circulation}/renew', [CirculationController::class, 'renew'])
+        ->name('circulations.renew');
+
+    Route::patch('/circulations/{circulation}/return', [CirculationController::class, 'recordReturn'])
+        ->name('circulations.return');
+
+    Route::patch('/circulations/{circulation}/lost', [CirculationController::class, 'markLost'])
+        ->name('circulations.lost');
 
     Route::patch('/roles/{role}/deactivate', [RoleController::class, 'deactivate'])
         ->name('roles.deactivate');
@@ -152,6 +163,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mis-reservas', [MyReservationController::class, 'index'])
         ->name('reservations.mine');
+
+    Route::get('/my-loans', [MyLoanController::class, 'index'])
+        ->name('circulations.mine');
 });
 
 Route::redirect('/', '/opac');

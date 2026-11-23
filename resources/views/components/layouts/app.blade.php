@@ -99,6 +99,13 @@
                             <span class="md:hidden" aria-hidden="true">▤</span>
                             <span class="hidden md:inline">Mis reservas</span>
                         </a>
+
+                        <a href="{{ route('circulations.mine') }}"
+                        title="Mis prestamos"
+                        class="rounded px-3 py-2 hover:bg-slate-700">
+                            <span class="md:hidden" aria-hidden="true">▤</span>
+                            <span class="hidden md:inline">Mis prestamos</span>
+                        </a>
                     @endif
                 </nav>
 

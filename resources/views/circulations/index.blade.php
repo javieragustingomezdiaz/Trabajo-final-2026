@@ -5,9 +5,15 @@
             <p class="mt-2 text-slate-600">Buscá préstamos registrados por fecha, socio, título o estado.</p>
         </div>
 
+        @if (session('status'))
+            <div class="mb-5 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status">
+                {{ session('status') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
-                <p class="font-medium">Los criterios de búsqueda no son válidos. Revisá los datos ingresados.</p>
+                <p class="font-medium">No se pudo completar la operación. Revisá la información.</p>
                 <ul class="mt-2 list-inside list-disc">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -88,6 +94,8 @@
                             <th class="px-4 py-3">Material / ejemplar</th>
                             <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Estado</th>
+                            <th class="px-4 py-3">Renovaciones</th>
+                            <th class="px-4 py-3">Acción</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-slate-700">
@@ -110,6 +118,57 @@
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-4">{{ $circulation->loan_type }}</td>
                                 <td class="whitespace-nowrap px-4 py-4">{{ $circulation->status?->name ?? 'Sin estado' }}</td>
+                                <td class="whitespace-nowrap px-4 py-4">{{ $circulation->number_renewals }}</td>
+                                <td class="whitespace-nowrap px-4 py-4">
+                                    @if (! $circulation->actual_return_date && in_array($circulation->status?->name, [\App\Models\Circulation::STATUS_ACTIVE, \App\Models\Circulation::STATUS_OVERDUE], true))
+                                        @if ($circulation->can_renew)
+                                            <form method="POST"
+                                                  action="{{ route('circulations.renew', ['circulation' => $circulation] + request()->query()) }}"
+                                                  onsubmit="return confirm('¿Confirmás renovar este préstamo?')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="font-medium text-blue-700 hover:underline">Renovar</button>
+                                            </form>
+                                        @elseif ($circulation->status?->name === \App\Models\Circulation::STATUS_ACTIVE && $circulation->loan_type === \App\Models\Circulation::TYPE_IN_LIBRARY)
+                                            <span class="text-slate-500">No renovable (consulta en sala)</span>
+                                        @elseif ($circulation->status?->name === \App\Models\Circulation::STATUS_ACTIVE)
+                                            <span class="text-slate-500">No renovable</span>
+                                        @endif
+                                        <form method="POST"
+                                              action="{{ route('circulations.return', ['circulation' => $circulation] + request()->query()) }}"
+                                              class="mt-3 space-y-2"
+                                              onsubmit="return confirm('¿Confirmás registrar la devolución de este ejemplar?')">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="flex items-center gap-2 text-xs text-slate-600">
+                                                <input type="checkbox" name="damaged" value="1" class="rounded border-slate-300">
+                                                Devuelto con daños
+                                            </label>
+                                            <label class="block text-xs font-medium text-slate-600">
+                                                Observación (opcional)
+                                                <textarea name="return_note" rows="2" maxlength="1000" class="catalog-input mt-1" placeholder="Describí los daños u otra incidencia"></textarea>
+                                            </label>
+                                            <button type="submit" class="font-medium text-emerald-700 hover:underline">Registrar devolución</button>
+                                        </form>
+                                        <details class="mt-4">
+                                            <summary class="cursor-pointer font-medium text-red-700 hover:underline">Registrar como perdido</summary>
+                                            <form method="POST"
+                                                  action="{{ route('circulations.lost', ['circulation' => $circulation] + request()->query()) }}"
+                                                  class="mt-2 space-y-2"
+                                                  onsubmit="return confirm('Esta acción dará de baja el ejemplar y deshabilitará la cuenta del socio. ¿Continuar?')">
+                                                @csrf
+                                                @method('PATCH')
+                                                <label class="block text-xs font-medium text-slate-600">
+                                                    Justificación obligatoria
+                                                    <textarea name="reason" rows="2" required maxlength="1000" class="catalog-input mt-1" placeholder="Motivo por el que se registra como perdido"></textarea>
+                                                </label>
+                                                <button type="submit" class="font-medium text-red-700 hover:underline">Confirmar pérdida</button>
+                                            </form>
+                                        </details>
+                                    @else
+                                        <span class="text-slate-400">—</span>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>

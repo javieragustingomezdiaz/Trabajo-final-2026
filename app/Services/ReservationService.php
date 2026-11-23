@@ -252,8 +252,8 @@ class ReservationService
         }
 
         $hasOverdueLoan = Circulation::query()
+            ->active()
             ->where('user_id', $user->id)
-            ->whereNull('actual_return_date')
             ->where(fn ($query) => $query
                 ->where('estimated_return_date', '<', $now)
                 ->orWhereHas('status', fn ($status) => $status->where('name', Circulation::STATUS_OVERDUE)))
@@ -288,8 +288,8 @@ class ReservationService
         }
 
         $alreadyLoanedThisTitle = Circulation::query()
+            ->active()
             ->where('user_id', $user->id)
-            ->whereNull('actual_return_date')
             ->whereHas('item', fn ($itemQuery) => $itemQuery->where('material_id', $material->id))
             ->exists();
 

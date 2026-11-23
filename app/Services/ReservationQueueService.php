@@ -29,13 +29,70 @@ class ReservationQueueService
             ->distinct()->pluck('material_id');
 
         foreach ($materialIds as $materialId) {
-            while ($reservationId = $this->offerNext($materialId)) {
-                if ($this->sendNotification($reservationId)) {
-                    $notificationsSent++;
-                } else {
-                    break;
-                }
+            $notificationsSent += $this->offerWaitingReservations((int) $materialId);
+        }
+
+        return $notificationsSent;
+    }
+
+    public function processForMaterial(int $materialId): int
+    {
+        $this->expireOffers();
+
+        return $this->offerWaitingReservations($materialId);
+    }
+
+    public function notifyWaitingForUnavailableMaterial(int $materialId): int
+    {
+        $material = Material::query()->find($materialId);
+        if (! $material) {
+            return 0;
+        }
+
+        $sent = 0;
+        $reservations = Reservation::query()
+            ->with('user.person')
+            ->where('material_id', $materialId)
+            ->whereHas('status', fn ($query) => $query->where('name', Reservation::STATUS_WAITING))
+            ->orderBy('registration_date')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($reservations as $reservation) {
+            $email = $reservation->user?->person?->email;
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                Log::error('No se pudo avisar que el material quedó sin ejemplares disponibles: correo inválido.', [
+                    'reservation_id' => $reservation->id,
+                ]);
+                continue;
             }
+
+            try {
+                Mail::send('emails.reservations.unavailable', compact('reservation', 'material'), function ($message) use ($email, $material): void {
+                    $message->to($email)->subject('Material sin ejemplares disponibles: ' . $material->title);
+                });
+                $sent++;
+            } catch (\Throwable $exception) {
+                Log::error('Falló el aviso de material sin ejemplares disponibles.', [
+                    'reservation_id' => $reservation->id,
+                    'exception' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return $sent;
+    }
+
+    private function offerWaitingReservations(int $materialId): int
+    {
+        $notificationsSent = 0;
+
+        while ($reservationId = $this->offerNext($materialId)) {
+            if (! $this->sendNotification($reservationId)) {
+                break;
+            }
+
+            $notificationsSent++;
         }
 
         return $notificationsSent;
